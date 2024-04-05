@@ -1,1 +1,1 @@
-# Document QnA with RAG.
+# Document QnA with RAG
