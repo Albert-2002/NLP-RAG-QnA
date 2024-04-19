@@ -1,3 +1,4 @@
 .env
 data_pdfs/
 chroma_db/
+.vscode/

@@ -1,10 +1,8 @@
 import os
 from dotenv import load_dotenv,find_dotenv
 from langchain_community.llms import HuggingFaceEndpoint
-from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import PromptTemplate
@@ -13,21 +11,8 @@ load_dotenv(find_dotenv())
 
 HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
 
-loader = PyMuPDFLoader("data_pdfs/idfc_fy21.pdf")
-data = loader.load()
-
-# print(data[111].page_content)
-
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=500)
-
-all_splits = text_splitter.split_documents(data)
-
-# print(all_splits[0].page_content)
-
 embeddings = SentenceTransformerEmbeddings(model_name="all-mpnet-base-v2")
-
-vectorstore = Chroma.from_documents(documents=all_splits, embedding=embeddings, persist_directory="./chroma_db")
-# vectorstore = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
+vectorstore = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
 
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 6})
 
@@ -59,7 +44,4 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# for chunk in rag_chain.stream("what is the pdf about?"):
-#     print(chunk, end="", flush=True)
-
-print(rag_chain.invoke("Give me summary of the asset quality of the bank"))
+print(rag_chain.invoke("Give me information on business ratios/information"))

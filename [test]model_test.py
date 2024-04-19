@@ -17,7 +17,7 @@ Answer: Let's see here."""
 
 prompt = PromptTemplate(template=template, input_variables=["question"])
 
-llm = HuggingFaceEndpoint(repo_id="mistralai/Mistral-7B-v0.1", max_new_tokens=64)
+llm = HuggingFaceEndpoint(repo_id="mistralai/Mistral-7B-Instruct-v0.2", max_new_tokens=64)
 
 # you can use  Encoder-Decoder Model ("text-generation") or  Encoder-Decoder Model ("text2text-generation")
 llm_chain = LLMChain(prompt=prompt,llm=llm)
