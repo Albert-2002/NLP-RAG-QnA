@@ -31,7 +31,7 @@ else:
     loader = PyMuPDFLoader("data_pdfs/idfc_fy21.pdf")
     data = loader.load()
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=1000)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=20000)
     all_splits = text_splitter.split_documents(data)
 
     vectorstore = Chroma.from_documents(documents=all_splits, embedding=embeddings, persist_directory="./chroma_db")
@@ -98,13 +98,22 @@ print("Welcome to the PDF Chatbot!")
 print("-----------------------------------------------------------------------------")
 
 i = 0
+x1 = "Null"
 while i == 0:
-    question = str(input("[1] Enter a question: \n[2] Enter 'Exit' to quit:\n"))
+    question = str(input("[1] Enter a question: \n[2] Enter 'Exit' to quit: \n[3] Enter 'Context' to view last output's context: \n\n"))
     if question == 'Exit':
         print("-x-x-x-x-x-x-x-x-x-x-x-")
         print("Thank you!")
         print("-x-x-x-x-x-x-x-x-x-x-x-")
         break
+    elif question == 'Context':
+        if x1 == "Null":
+            print("No context available!")
+            print("-----------------------------------------------------------------------------")
+        else:
+            for document in x1["context"]:
+                print('PDF Page Numbers: ',document.metadata.get('page'))
+                print("-----------------------------------------------------------------------------")
     else:
         x1 = conversational_rag_chain.invoke({"input": question},
                                              config={"configurable": {"session_id": "abc123"}},)
