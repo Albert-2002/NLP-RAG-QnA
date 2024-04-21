@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv,find_dotenv
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain_community.embeddings import SentenceTransformerEmbeddings
-from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -11,6 +10,13 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import os
+from dotenv import load_dotenv,find_dotenv
+
+load_dotenv(find_dotenv())
+
+COHERE_TOKEN = os.environ.get("COHERE_API_KEY")
+HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
 
 from langchain.globals import set_llm_cache
 from langchain.cache import InMemoryCache
@@ -18,33 +24,33 @@ from langchain.cache import InMemoryCache
 llm_cache = InMemoryCache()
 set_llm_cache(llm_cache)
 
-load_dotenv(find_dotenv())
-
-HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+from langchain_community.llms import HuggingFaceEndpoint
 
 llm = HuggingFaceEndpoint(repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1",max_new_tokens=1500,
                                              temperature=0.5,top_k=80,top_p=0.95,streaming=True)
 
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.vectorstores import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+loader = PyMuPDFLoader("data_pdfs/idfc_fy21.pdf")
+documents = loader.load()
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=20000)
+texts = text_splitter.split_documents(documents)
 embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-
-print("-----------------------------------------------------------------------------")
-
-if os.path.exists('./chroma_db') == True:
-    print("DB Exists - Accessing......")
-    vectorstore = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
-else:
-    print("DB Does not Exist - Creating......")
-    loader = PyMuPDFLoader("data_pdfs/idfc_fy21.pdf")
-    data = loader.load()
-
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=20000)
-    all_splits = text_splitter.split_documents(data)
-
-    vectorstore = Chroma.from_documents(documents=all_splits, embedding=embeddings, persist_directory="./chroma_db")
-
-print("-----------------------------------------------------------------------------")
-
+vectorstore = Chroma.from_documents(texts,embeddings)
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 20})
+
+from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain_cohere import CohereRerank
+
+compressor = CohereRerank()
+compression_retriever = ContextualCompressionRetriever(
+    base_compressor=compressor, base_retriever=retriever
+)
+
+retriever = compression_retriever
 
 ### Contextualize question ###
 contextualize_q_system_prompt = """Given a chat history and the latest user question \
