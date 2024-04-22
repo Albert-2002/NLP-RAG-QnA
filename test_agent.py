@@ -20,7 +20,8 @@ HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
 class Agent:
     def __init__(self, huggingfacehub_api_token: str | None = None) -> None:
         # if HUGGINGFACEHUB_API_TOKEN is None, then it will look the enviroment variable HUGGINGFACEHUB_API_TOKEN
-        self.embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+        self.embeddings = SentenceTransformerEmbeddings(model_name="AlbertG3/BankStockEmbed")
+        # self.embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=20000)
         # mistralai/Mistral-7B-Instruct-v0.1/2
         # mistralai/Mixtral-8x7B-Instruct-v0.1

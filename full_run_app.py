@@ -2,7 +2,7 @@ import os
 import tempfile
 import streamlit as st
 from streamlit_chat import message
-from trial_run_agent import Agent
+from full_run_agent import Agent
 
 st.set_page_config(page_title="ChatPDF")
 

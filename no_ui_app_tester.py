@@ -3,6 +3,8 @@ from dotenv import load_dotenv,find_dotenv
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_community.vectorstores import Chroma
+from langchain.retrievers.multi_query import MultiQueryRetriever
+
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -11,7 +13,7 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+from langchain_groq import ChatGroq
 from langchain.globals import set_llm_cache
 from langchain.cache import InMemoryCache
 
@@ -21,11 +23,15 @@ set_llm_cache(llm_cache)
 load_dotenv(find_dotenv())
 
 HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+GROQ_TOKEN = os.environ.get("GROQ_API_KEY")
 
 llm = HuggingFaceEndpoint(repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1",max_new_tokens=1500,
                                              temperature=0.5,top_k=80,top_p=0.95,streaming=True)
 
-embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+groq_llm = ChatGroq(temperature=0, groq_api_key=GROQ_TOKEN, model_name="llama3-8b-8192")
+
+# embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = SentenceTransformerEmbeddings(model_name="AlbertG3/BankStockEmbed")
 
 print("-----------------------------------------------------------------------------")
 
@@ -44,7 +50,7 @@ else:
 
 print("-----------------------------------------------------------------------------")
 
-retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 20})
+retriever = MultiQueryRetriever.from_llm(retriever=vectorstore.as_retriever(), llm=groq_llm)
 
 ### Contextualize question ###
 contextualize_q_system_prompt = """Given a chat history and the latest user question \
@@ -62,14 +68,16 @@ history_aware_retriever = create_history_aware_retriever(
     llm, retriever, contextualize_q_prompt
 )
 
-
 ### Answer question ###
-qa_system_prompt = """You are an assistant for question-answering tasks. \
-Use the following pieces of retrieved context to answer the question. \
-If you don't know the answer, just say that you don't know. \
-Use three sentences maximum and keep the answer concise.\
+qa_system_prompt = """You are a Stock Annual Report Question and Answer bot.
+Use the following pieces of context as your ONLY source of truth and don't make up information.
+Perform calculations when needed and asked in the question.
+If you don't know the answer, just say that you don't know, DON'T try to make up an answer.
+Use five sentences maximum and keep the answer as concise as possible.
 
+The context is as follows:
 {context}"""
+
 qa_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", qa_system_prompt),

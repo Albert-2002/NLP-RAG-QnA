@@ -2,7 +2,6 @@ from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain.chains import ConversationalRetrievalChain
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
@@ -23,6 +22,13 @@ from dotenv import load_dotenv,find_dotenv
 load_dotenv(find_dotenv())
 
 HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
+def clean_string(text):
+    # Remove all occurrences of "AI:" and "</s>"
+    cleaned_text = text.replace("AI:", "").replace("</s>", "").replace("Assistant:","")
+    # Optionally, trim leading/trailing whitespace
+    cleaned_text = cleaned_text.strip()
+    return cleaned_text
 
 ### Contextualize question ###
 contextualize_q_system_prompt = """Given a chat history and the latest user question \
@@ -58,7 +64,7 @@ class Agent:
             response = "Please, add a document."
         else:
             response = self.chain.invoke({"input": question}, config={"configurable": {"session_id": "abc123"}},)
-            response = response["answer"]
+            response = clean_string(response["answer"])
         return response
 
     def ingest(self, file_path: os.PathLike) -> None:
