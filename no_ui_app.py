@@ -118,8 +118,8 @@ while i == 0:
             print("No context available!")
             print("-----------------------------------------------------------------------------")
         else:
-            for document in x1["context"]:
-                print('PDF Page Numbers: ',document.metadata.get('page'))
+            for document_p in x1["context"]:
+                print('PDF Page Numbers: ',document_p.metadata.get('page'))
                 print("-----------------------------------------------------------------------------")
     else:
         x1 = conversational_rag_chain.invoke({"input": question},

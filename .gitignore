@@ -4,3 +4,5 @@ chroma_db/
 .vscode/
 __pycache__/
 *.pkl
+*.json
+*.zip
