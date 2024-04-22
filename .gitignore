@@ -6,3 +6,5 @@ __pycache__/
 *.pkl
 *.json
 *.zip
+BankStockEmbed/
+upload_model.ipynb
