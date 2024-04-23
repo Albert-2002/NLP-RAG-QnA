@@ -9,7 +9,8 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
-
+from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain_groq import ChatGroq
 
 from langchain.globals import set_llm_cache
 from langchain.cache import InMemoryCache
@@ -22,6 +23,9 @@ from dotenv import load_dotenv,find_dotenv
 load_dotenv(find_dotenv())
 
 HF_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+GROQ_TOKEN = os.environ.get("GROQ_API_KEY")
+
+groq_llm = ChatGroq(temperature=0, groq_api_key=GROQ_TOKEN, model_name="llama3-8b-8192")
 
 def clean_string(text):
     # Remove all occurrences of "AI:" and "</s>"
@@ -50,7 +54,7 @@ class Agent:
     def __init__(self, huggingfacehub_api_token: str | None = None) -> None:
         # if HUGGINGFACEHUB_API_TOKEN is None, then it will look the enviroment variable HUGGINGFACEHUB_API_TOKEN
         self.embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=501000, chunk_overlap=20000)
+        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=250000, chunk_overlap=10000)
         # mistralai/Mistral-7B-Instruct-v0.1/2
         # mistralai/Mixtral-8x7B-Instruct-v0.1
 
@@ -79,9 +83,11 @@ class Agent:
             ("system", contextualize_q_system_prompt),
             MessagesPlaceholder("chat_history"),
             ("human", "{input}"),])
-
+            retrieev = self.db.as_retriever()
+            # secondary_retriever = self.db.as_retriever(search_type="similarity", search_kwargs={"k": 16})
+            # history_aware_retriever = create_history_aware_retriever(self.llm,secondary_retriever,contextualize_q_prompt)
             history_aware_retriever = create_history_aware_retriever(
-            self.llm, self.db.as_retriever(search_type="similarity",search_kwargs={"k":16}), contextualize_q_prompt)
+            self.llm, MultiQueryRetriever.from_llm(retriever=retrieev,llm=groq_llm),contextualize_q_prompt)
 
             qa_prompt = ChatPromptTemplate.from_messages(
             [("system", qa_system_prompt),MessagesPlaceholder("chat_history"),("human", "{input}"),])
@@ -109,3 +115,9 @@ class Agent:
         self.db = None
         self.chain = None
         self.chat_history = None
+
+# Set logging for the queries
+import logging
+
+logging.basicConfig()
+print(logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO))
